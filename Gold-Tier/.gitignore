@@ -1,0 +1,62 @@
+# ─── Secrets & Credentials (NEVER commit) ───
+.env
+credentials.json
+authorized_user.json
+token.json
+*.pickle
+
+# ─── Agent Lock Files ───
+.agent_running.lock
+.hitl_running.lock
+.scheduler_running.lock
+.orchestrator_running.lock
+
+# ─── Session Data (never commit) ───
+.whatsapp_session/
+linkedin_token.json
+odoo_session.json
+
+# ─── Social Media Tokens (Gold) ───
+fb_token.json
+ig_token.json
+x_token.json
+
+# ─── Quarantine Data ───
+data/Quarantine/*.md
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# ─── Logs (keep structure, ignore contents) ───
+data/Logs/*.json
+data/Logs/*.log
+!data/Logs/.gitkeep
+
+# ─── IDE / Editor ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS Files ───
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Node (MCP servers) ───
+node_modules/
+package-lock.json
+
+# ─── Watcher Logs ───
+watcher/data/

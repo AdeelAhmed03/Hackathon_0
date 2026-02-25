@@ -1,0 +1,11 @@
+{
+  "name": "social-mcp-fb",
+  "version": "1.0.0",
+  "description": "Facebook MCP server for AI Employee Vault (Gold Tier) — post messages, get engagement summaries via Graph API v19.0",
+  "main": "social-mcp-fb.js",
+  "type": "module",
+  "scripts": {
+    "start": "node social-mcp-fb.js"
+  },
+  "dependencies": {}
+}

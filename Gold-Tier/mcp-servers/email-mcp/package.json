@@ -1,0 +1,13 @@
+{
+  "name": "email-mcp",
+  "version": "1.0.0",
+  "description": "MCP email server for AI Employee Vault (Gold Tier) — draft, send, reply, forward via Gmail SMTP",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.0"
+  }
+}

@@ -1,0 +1,47 @@
+# ─── Secrets & Credentials (NEVER commit) ───
+.env
+credentials.json
+authorized_user.json
+token.json
+*.pickle
+
+# ─── Agent Lock Files ───
+.agent_running.lock
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# ─── Logs (keep structure, ignore contents) ───
+data/Logs/*.json
+data/Logs/*.log
+!data/Logs/.gitkeep
+
+# ─── IDE / Editor ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS Files ───
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Node (if MCP servers added later) ───
+node_modules/
+package-lock.json
+
+# ─── Hackathon Doc (large binary, not needed in repo) ───
+*.pdf
+*.docx

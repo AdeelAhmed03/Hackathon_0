@@ -1,0 +1,11 @@
+{
+  "name": "social-mcp-x",
+  "version": "1.0.0",
+  "description": "Twitter/X MCP server for AI Employee Vault (Gold Tier) — post tweets, get engagement summaries via X API v2",
+  "main": "social-mcp-x.js",
+  "type": "module",
+  "scripts": {
+    "start": "node social-mcp-x.js"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(xargs:*)",
+      "mcp__email-mcp__draft",
+      "mcp__email-mcp__send",
+      "mcp__MCP_DOCKER__mcp-find",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(tasklist:*)",
+      "Bash(where:*)",
+      "Bash(pm2 --version:*)",
+      "Bash(pm2 status:*)",
+      "Bash(pm2 save:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "email-mcp"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "social-mcp-ig",
+  "version": "1.0.0",
+  "description": "Instagram MCP server for AI Employee Vault (Gold Tier) — post media, get engagement summaries via Graph API v19.0",
+  "main": "social-mcp-ig.js",
+  "type": "module",
+  "scripts": {
+    "start": "node social-mcp-ig.js"
+  },
+  "dependencies": {}
+}

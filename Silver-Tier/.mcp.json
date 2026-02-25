@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "email-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/email-mcp/index.js"],
+      "env": {
+        "MCP_EMAIL_SERVER": "smtp.gmail.com",
+        "MCP_EMAIL_PORT": "587",
+        "MCP_EMAIL_ADDRESS": "adeelabro007@gmail.com",
+        "MCP_EMAIL_APP_PASSWORD": "rnkk vius dgru efif",
+        "MCP_EMAIL_DRY_RUN": "false"
+      }
+    }
+  }
+}

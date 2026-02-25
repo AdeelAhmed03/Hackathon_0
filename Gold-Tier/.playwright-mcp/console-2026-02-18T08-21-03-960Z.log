@@ -1,0 +1,6 @@
+[    6689ms] [ERROR] ErrorUtils caught an error:
+
+[uim] Attempting to set multiple UIM tree roots. Expecting only one. Existing root: App, New root: App (multiple-uim-roots)
+
+Subsequent non-fatal errors won't be logged; see https://fburl.com/debugjs. {column: 17870, clientTime: 1771402870, extra: Object, guardList: Array(0), hash: 2l4bqt} @ https://static.whatsapp.net/rsrc.php/v4/y1/r/nNYs_w7IK4e.js:76
+[   92306ms] [ERROR] Refused to display 'https://flows.whatsapp.net/' in a frame because it set 'X-Frame-Options' to 'deny'. @ chrome-error://chromewebdata/:0
