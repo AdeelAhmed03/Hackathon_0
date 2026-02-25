@@ -1,0 +1,20 @@
+# Platinum Tier Security & Backup Cron Jobs
+
+# Daily security scan at 2 AM
+0 2 * * * cd /path/to/AI_Employee_Vault/Platinum-Tier && python security/scan_secrets.py --report >> data/Logs/security_scan.log 2>&1
+
+# Weekly credential rotation on Sundays at 3 AM
+0 3 * * 0 cd /path/to/AI_Employee_Vault/Platinum-Tier && python security/rotate_credentials.py --type all --backup --test >> data/Logs/credential_rotation.log 2>&1
+
+# Daily backup at 1 AM
+0 1 * * * cd /path/to/AI_Employee_Vault/Platinum-Tier && python backup/backup_system.py --password "$(cat /secure/path/backup_password_file 2>/dev/null || echo 'default_pass')" --verify --cleanup >> data/Logs/backup.log 2>&1
+
+# Weekly backup verification (check integrity) on Wednesdays at 4 AM
+0 4 * * 3 cd /path/to/AI_Employee_Vault/Platinum-Tier && find data/Backups -name "vault_backup_*" -mtime -7 -exec python -c "import tarfile; print('Verifying: ' + '{}'); tarfile.open('{}', 'r:gz').getmembers(); print('OK')" {} \; >> data/Logs/backup_verify.log 2>&1
+
+# Monthly detailed security audit on the 1st of each month at 5 AM
+0 5 1 * * cd /path/to/AI_Employee_Vault/Platinum-Tier && python security/scan_secrets.py --verbose --report >> data/Logs/security_monthly.log 2>&1
+
+# Restart services if they crash (every 10 minutes)
+*/10 * * * * pgrep -f "orchestrator_cloud" > /dev/null || cd /path/to/AI_Employee_Vault/Platinum-Tier && python watcher/orchestrator_cloud.py >> data/Logs/cloud_orchestrator.log 2>&1
+*/10 * * * * pgrep -f "agent-local-executive" > /dev/null || cd /path/to/AI_Employee_Vault/Platinum-Tier && python agents/agent-local-executive.py >> data/Logs/local_executive.log 2>&1

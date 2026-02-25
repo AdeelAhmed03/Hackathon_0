@@ -1,0 +1,101 @@
+# ─── Secrets & Credentials (NEVER commit) ───
+.env
+.env.cloud
+.env.local
+*.env
+config.env
+credentials.json
+authorized_user.json
+token.json
+tokens.json
+secrets.json
+*.secret
+*.key
+*.pem
+*.crt
+*.password
+*.passwd
+app_credentials.json
+api_keys.json
+passwords.txt
+keys/
+*.token
+*.tokens
+.env*
+data/.env*
+data/whatsapp_session*
+data/whatsapp-session*
+data/session-*
+*.pyc
+data/Backups/
+secrets/*
+
+# ─── Agent Lock Files ───
+.agent_running.lock
+.hitl_running.lock
+.scheduler_running.lock
+.orchestrator_running.lock
+
+# ─── Session Data (never commit) ───
+.whatsapp_session/
+linkedin_token.json
+odoo_session.json
+sessions/
+*.session
+session_data/
+session_store/
+
+# ─── Social Media Tokens (Gold) ───
+fb_token.json
+ig_token.json
+x_token.json
+
+# ─── MCP Server Configs (may contain sensitive data) ───
+mcp-servers/*/config.json
+mcp-servers/*/.env
+mcp-servers/*/tokens.json
+
+# ─── Browser Automation Data ───
+*.crdownload
+playwright/
+playwright-state/
+
+# ─── Quarantine Data ───
+data/Quarantine/*.md
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# ─── Logs (keep structure, ignore contents) ───
+data/Logs/*.json
+data/Logs/*.log
+!data/Logs/.gitkeep
+
+# ─── IDE / Editor ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS Files ───
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Node (MCP servers) ───
+node_modules/
+package-lock.json
+
+# ─── Watcher Logs ───
+watcher/data/

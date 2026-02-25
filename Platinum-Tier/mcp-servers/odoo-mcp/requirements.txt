@@ -1,0 +1,3 @@
+# Odoo MCP Server Dependencies
+# xmlrpc.client is stdlib — no extra deps needed
+python-dotenv>=1.0.0

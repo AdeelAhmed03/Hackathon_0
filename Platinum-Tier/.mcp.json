@@ -1,0 +1,72 @@
+{
+  "mcpServers": {
+    "email-mcp": {
+      "command": "node",
+      "args": ["mcp-servers/email-mcp/index.js"],
+      "env": {
+        "MCP_EMAIL_SERVER": "smtp.gmail.com",
+        "MCP_EMAIL_PORT": "587",
+        "MCP_EMAIL_ADDRESS": "adeelabro007@gmail.com",
+        "MCP_EMAIL_APP_PASSWORD": "rnkk vius dgru efif",
+        "MCP_EMAIL_DRY_RUN": "false"
+      }
+    },
+    "odoo-mcp": {
+      "command": "python",
+      "args": ["mcp-servers/odoo-mcp/odoo_mcp.py"],
+      "env": {
+        "ODOO_URL": "http://localhost:8069",
+        "ODOO_DB": "ai_employee",
+        "ODOO_USERNAME": "admin",
+        "ODOO_PASSWORD": "admin",
+        "ODOO_DRY_RUN": "true"
+      }
+    },
+    "social-mcp": {
+      "command": "python",
+      "args": ["mcp-servers/social-mcp/social_mcp.py"],
+      "env": {
+        "FB_PAGE_ID": "${FB_PAGE_ID}",
+        "FB_ACCESS_TOKEN": "${FB_ACCESS_TOKEN}",
+        "FB_DRY_RUN": "true",
+        "IG_BUSINESS_ACCOUNT_ID": "${IG_BUSINESS_ACCOUNT_ID}",
+        "X_API_KEY": "${X_API_KEY}",
+        "X_API_SECRET": "${X_API_SECRET}",
+        "X_ACCESS_TOKEN": "${X_ACCESS_TOKEN}",
+        "X_ACCESS_SECRET": "${X_ACCESS_SECRET}",
+        "X_BEARER_TOKEN": "${X_BEARER_TOKEN}",
+        "X_DRY_RUN": "true"
+      }
+    },
+    "social-mcp-fb": {
+      "command": "node",
+      "args": ["mcp-servers/social-mcp-fb/social-mcp-fb.js"],
+      "env": {
+        "FB_PAGE_ID": "${FB_PAGE_ID}",
+        "FB_ACCESS_TOKEN": "${FB_ACCESS_TOKEN}",
+        "FB_DRY_RUN": "true"
+      }
+    },
+    "social-mcp-ig": {
+      "command": "node",
+      "args": ["mcp-servers/social-mcp-ig/social-mcp-ig.js"],
+      "env": {
+        "IG_BUSINESS_ACCOUNT_ID": "${IG_BUSINESS_ACCOUNT_ID}",
+        "FB_ACCESS_TOKEN": "${FB_ACCESS_TOKEN}",
+        "IG_DRY_RUN": "true"
+      }
+    },
+    "social-mcp-x": {
+      "command": "node",
+      "args": ["mcp-servers/social-mcp-x/social-mcp-x.js"],
+      "env": {
+        "X_API_KEY": "${X_API_KEY}",
+        "X_API_SECRET": "${X_API_SECRET}",
+        "X_ACCESS_TOKEN": "${X_ACCESS_TOKEN}",
+        "X_ACCESS_SECRET": "${X_ACCESS_SECRET}",
+        "X_BEARER_TOKEN": "${X_BEARER_TOKEN}",
+        "X_DRY_RUN": "true"
+      }
+    }
+  }
+}
