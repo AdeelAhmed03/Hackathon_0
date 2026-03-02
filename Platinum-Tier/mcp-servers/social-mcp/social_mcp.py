@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Social Media MCP Server — Gold Tier
+Social Media MCP Server — Platinum Tier Enhancement
 
 Unified interface for Facebook, Instagram, and Twitter/X posting and feed summaries.
-Uses Facebook Graph API v19.0, Instagram Graph API, and X API v2 (via tweepy).
+Primarily uses browser automation (Playwright) to access your actual accounts
+through cookie-based authentication (like LinkedIn), with API-based fallbacks.
 
 DRY_RUN mode returns realistic mock data without calling any APIs.
 
@@ -11,6 +12,12 @@ Usage:
     python social_mcp.py                # Start MCP server
     python social_mcp.py --dry-run      # Test with mock data
     python social_mcp.py --test         # Run self-test
+
+Browser Authentication:
+    # Authenticate each platform once using your actual account:
+    node mcp-servers/browser-social-mcp/browser-social-mcp.js --auth facebook
+    node mcp-servers/browser-social-mcp/browser-social-mcp.js --auth instagram
+    node mcp-servers/browser-social-mcp/browser-social-mcp.js --auth x
 """
 
 import os
@@ -137,6 +144,93 @@ MOCK_LINKEDIN_FEED = [
 ]
 
 
+# ── BROWSER MCP CLIENT ───────────────────────────────────────────────────
+class BrowserMCPClient:
+    """Client to communicate with the browser-based social MCP server"""
+
+    def __init__(self):
+        self.process = None
+        self.browser_mcp_path = VAULT_DIR / "mcp-servers" / "browser-social-mcp" / "browser-social-mcp.js"
+        self._start_browser_mcp()
+
+    def _start_browser_mcp(self):
+        """Start the browser-based MCP server as a subprocess"""
+        try:
+            import subprocess
+            # Start browser MCP server as subprocess
+            self.process = subprocess.Popen(
+                ["node", str(self.browser_mcp_path)],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1
+            )
+
+            # Initialize the connection
+            init_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize"
+            }
+
+            self.process.stdin.write(json.dumps(init_request) + "\n")
+            self.process.stdin.flush()
+
+            # Read response
+            response_line = self.process.stdout.readline()
+            if response_line:
+                response = json.loads(response_line.strip())
+                if "result" in response:
+                    logger.info(f"Connected to browser-social-mcp: {response['result']['name']}")
+                else:
+                    logger.warning(f"Browser MCP initialization failed: {response.get('error', 'Unknown error')}")
+
+        except Exception as e:
+            logger.error(f"Failed to start browser MCP: {e}")
+            self.process = None
+
+    def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Call a tool on the browser MCP server"""
+        if not self.process:
+            logger.warning("Browser MCP not running, using API fallback")
+            return None
+
+        try:
+            request = {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": arguments
+                }
+            }
+
+            self.process.stdin.write(json.dumps(request) + "\n")
+            self.process.stdin.flush()
+
+            # Read response
+            response_line = self.process.stdout.readline()
+            if response_line:
+                response = json.loads(response_line.strip())
+
+                if "result" in response and response["result"]["content"]:
+                    return json.loads(response["result"]["content"][0]["text"])
+                elif "error" in response:
+                    logger.error(f"Browser tool call failed: {response['error']['message']}")
+                    return None
+
+        except Exception as e:
+            logger.error(f"Browser tool call failed: {e}")
+            return None
+
+        return None
+
+# Global browser MCP client instance
+browser_mcp_client = BrowserMCPClient()
+
+
 # ── GRACEFUL DEGRADATION (Gold Tier) ─────────────────────────────────────
 def _queue_deferred(platform, action, details):
     """Queue a task file when a social API is down (graceful degradation)."""
@@ -185,6 +279,262 @@ The {platform} API was unavailable. This task has been queued for retry.
                 error=e,
                 severity="ERROR",
             )
+
+
+# ── UPDATED FACEBOOK TOOLS (with browser priority) ───────────────────────
+def post_to_facebook(message):
+    """Post a message to the configured Facebook Page.
+
+    Prioritizes browser-based authentication using cookies over API keys.
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("post_to_facebook", {
+        "message": message
+    })
+
+    if result and result.get("success"):
+        logger.info(f"Facebook post successful via browser: {message[:80]}...")
+        return result
+
+    # Fallback to API-based approach
+    if FB_DRY_RUN:
+        result = {**MOCK_FB_POST, "message": message}
+        logger.info(f"[DRY RUN] Facebook post: {message[:80]}...")
+        return {"success": True, "dry_run": True, "platform": "facebook", "post": result}
+
+    import requests
+    url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/feed"
+    resp = requests.post(url, data={"message": message, "access_token": FB_ACCESS_TOKEN}, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return {"success": True, "dry_run": False, "platform": "facebook",
+            "post": {"id": data.get("id"), "message": message}}
+
+
+def get_fb_feed_summary(limit=10):
+    """Get a summary of recent Facebook Page posts with engagement metrics.
+
+    Prioritizes browser-based authentication using cookies over API keys.
+
+    Args:
+        limit: Number of posts to retrieve (default 10)
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("get_facebook_summary", {"limit": limit})
+
+    if result and result.get("success"):
+        logger.info(f"Facebook summary successful via browser")
+        return result
+
+    # Fallback to API-based approach
+    if FB_DRY_RUN:
+        total_likes = sum(p["likes"] for p in MOCK_FB_FEED)
+        total_comments = sum(p["comments"] for p in MOCK_FB_FEED)
+        total_shares = sum(p["shares"] for p in MOCK_FB_FEED)
+        logger.info(f"[DRY RUN] Facebook feed summary: {len(MOCK_FB_FEED)} posts")
+        return {
+            "success": True, "dry_run": True, "platform": "facebook",
+            "summary": {
+                "post_count": len(MOCK_FB_FEED),
+                "total_likes": total_likes, "total_comments": total_comments,
+                "total_shares": total_shares,
+                "avg_engagement": round((total_likes + total_comments + total_shares) / len(MOCK_FB_FEED), 1),
+                "top_post": max(MOCK_FB_FEED, key=lambda p: p["likes"]),
+                "period": f"{MOCK_FB_FEED[-1]['created_time'][:10]} to {MOCK_FB_FEED[0]['created_time'][:10]}"
+            },
+            "posts": MOCK_FB_FEED
+        }
+
+    import requests
+    url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/feed"
+    resp = requests.get(url, params={
+        "access_token": FB_ACCESS_TOKEN,
+        "fields": "id,message,created_time,likes.summary(true),comments.summary(true),shares",
+        "limit": limit
+    }, timeout=30)
+    resp.raise_for_status()
+    posts = resp.json().get("data", [])
+    return {"success": True, "dry_run": False, "platform": "facebook",
+            "summary": {"post_count": len(posts)}, "posts": posts}
+
+
+# ── UPDATED INSTAGRAM TOOLS (with browser priority) ──────────────────────
+def post_to_instagram(caption, image_url=None):
+    """Post to Instagram Business account (requires image_url for non-dry-run).
+
+    Prioritizes browser-based authentication using cookies over API keys.
+
+    Args:
+        caption: The caption text for the post
+        image_url: Public URL of the image to post (required for actual posting)
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("post_to_instagram", {
+        "caption": caption,
+        "image_url": image_url
+    })
+
+    if result and result.get("success"):
+        logger.info(f"Instagram post successful via browser: {caption[:80]}...")
+        return result
+
+    # Fallback to API-based approach
+    if FB_DRY_RUN:  # IG uses same FB token
+        result = {**MOCK_IG_POST, "caption": caption}
+        logger.info(f"[DRY RUN] Instagram post: {caption[:80]}...")
+        return {"success": True, "dry_run": True, "platform": "instagram", "post": result}
+
+    import requests
+    # Step 1: Create media container
+    container_url = f"https://graph.facebook.com/v19.0/{IG_ACCOUNT_ID}/media"
+    container_resp = requests.post(container_url, data={
+        "image_url": image_url, "caption": caption, "access_token": FB_ACCESS_TOKEN
+    }, timeout=30)
+    container_resp.raise_for_status()
+    creation_id = container_resp.json()["id"]
+
+    # Step 2: Publish
+    publish_url = f"https://graph.facebook.com/v19.0/{IG_ACCOUNT_ID}/media_publish"
+    pub_resp = requests.post(publish_url, data={
+        "creation_id": creation_id, "access_token": FB_ACCESS_TOKEN
+    }, timeout=30)
+    pub_resp.raise_for_status()
+    return {"success": True, "dry_run": False, "platform": "instagram",
+            "post": {"id": pub_resp.json()["id"], "caption": caption}}
+
+
+def get_ig_media_summary(limit=10):
+    """Get a summary of recent Instagram posts with engagement metrics.
+
+    Prioritizes browser-based authentication using cookies over API keys.
+
+    Args:
+        limit: Number of posts to retrieve (default 10)
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("get_instagram_summary", {"limit": limit})
+
+    if result and result.get("success"):
+        logger.info(f"Instagram summary successful via browser")
+        return result
+
+    # Fallback to API-based approach
+    if FB_DRY_RUN:
+        total_likes = sum(p["like_count"] for p in MOCK_IG_MEDIA)
+        total_comments = sum(p["comments_count"] for p in MOCK_IG_MEDIA)
+        logger.info(f"[DRY RUN] Instagram media summary: {len(MOCK_IG_MEDIA)} posts")
+        return {
+            "success": True, "dry_run": True, "platform": "instagram",
+            "summary": {
+                "post_count": len(MOCK_IG_MEDIA),
+                "total_likes": total_likes, "total_comments": total_comments,
+                "avg_engagement": round((total_likes + total_comments) / len(MOCK_IG_MEDIA), 1),
+                "top_post": max(MOCK_IG_MEDIA, key=lambda p: p["like_count"]),
+            },
+            "posts": MOCK_IG_MEDIA
+        }
+
+    import requests
+    url = f"https://graph.facebook.com/v19.0/{IG_ACCOUNT_ID}/media"
+    resp = requests.get(url, params={
+        "access_token": FB_ACCESS_TOKEN,
+        "fields": "id,caption,like_count,comments_count,media_type,timestamp,permalink",
+        "limit": limit
+    }, timeout=30)
+    resp.raise_for_status()
+    posts = resp.json().get("data", [])
+    return {"success": True, "dry_run": False, "platform": "instagram",
+            "summary": {"post_count": len(posts)}, "posts": posts}
+
+
+# ── UPDATED TWITTER/X TOOLS (with browser priority) ──────────────────────
+def post_tweet(text):
+    """Post a tweet to X (Twitter).
+
+    Prioritizes browser-based authentication using cookies over API keys.
+
+    Args:
+        text: The tweet text (max 280 characters)
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("post_to_x", {
+        "text": text
+    })
+
+    if result and result.get("success"):
+        logger.info(f"X post successful via browser: {text[:80]}...")
+        return result
+
+    # Fallback to API-based approach
+    if X_DRY_RUN:
+        if len(text) > 280:
+            return {"success": False, "dry_run": True, "platform": "x",
+                    "error": f"Tweet exceeds 280 chars ({len(text)})"}
+        result = {**MOCK_TWEET, "text": text}
+        logger.info(f"[DRY RUN] Tweet: {text[:80]}...")
+        return {"success": True, "dry_run": True, "platform": "x", "tweet": result}
+
+    import tweepy
+    client = tweepy.Client(
+        bearer_token=X_BEARER_TOKEN,
+        consumer_key=X_API_KEY, consumer_secret=X_API_SECRET,
+        access_token=X_ACCESS_TOKEN, access_token_secret=X_ACCESS_SECRET
+    )
+    resp = client.create_tweet(text=text)
+    tweet_id = resp.data["id"]
+    return {"success": True, "dry_run": False, "platform": "x",
+            "tweet": {"id": tweet_id, "text": text}}
+
+
+def get_x_timeline_summary(limit=10):
+    """Get a summary of recent tweets with engagement metrics.
+
+    Prioritizes browser-based authentication using cookies over API keys.
+
+    Args:
+        limit: Number of tweets to retrieve (default 10)
+    """
+    # Try browser-based approach first
+    result = browser_mcp_client.call_tool("get_x_summary", {"limit": limit})
+
+    if result and result.get("success"):
+        logger.info(f"X summary successful via browser")
+        return result
+
+    # Fallback to API-based approach
+    if X_DRY_RUN:
+        total_likes = sum(t["likes"] for t in MOCK_TIMELINE)
+        total_rts = sum(t["retweets"] for t in MOCK_TIMELINE)
+        logger.info(f"[DRY RUN] X timeline summary: {len(MOCK_TIMELINE)} tweets")
+        return {
+            "success": True, "dry_run": True, "platform": "x",
+            "summary": {
+                "tweet_count": len(MOCK_TIMELINE),
+                "total_likes": total_likes, "total_retweets": total_rts,
+                "avg_engagement": round((total_likes + total_rts) / len(MOCK_TIMELINE), 1),
+                "top_tweet": max(MOCK_TIMELINE, key=lambda t: t["likes"]),
+            },
+            "tweets": MOCK_TIMELINE
+        }
+
+    import tweepy
+    client = tweepy.Client(bearer_token=X_BEARER_TOKEN)
+    me = client.get_me()
+    tweets = client.get_users_tweets(
+        me.data.id, max_results=min(limit, 100),
+        tweet_fields=["created_at", "public_metrics"]
+    )
+    results = []
+    for t in (tweets.data or []):
+        metrics = t.public_metrics or {}
+        results.append({
+            "id": t.id, "text": t.text, "created_at": str(t.created_at),
+            "likes": metrics.get("like_count", 0),
+            "retweets": metrics.get("retweet_count", 0),
+            "replies": metrics.get("reply_count", 0)
+        })
+    return {"success": True, "dry_run": False, "platform": "x",
+            "summary": {"tweet_count": len(results)}, "tweets": results}
 
 
 # ── FACEBOOK TOOLS ───────────────────────────────────────────────────────
@@ -668,42 +1018,47 @@ def get_linkedin_feed_summary(limit=10, is_page_feed=False, **kwargs):
 # ── MCP STDIO PROTOCOL ──────────────────────────────────────────────────
 TOOLS = {
     "post_to_facebook": {
-        "description": "Post a message to the Facebook Page",
-        "parameters": {"message": "string"},
+        "description": "Post a message to your Facebook account using browser automation (with API fallback). Requires HITL-approved file.",
+        "parameters": {"message": "string", "link": "string (optional)"},
         "handler": post_to_facebook
     },
     "get_fb_feed_summary": {
-        "description": "Get engagement summary of recent Facebook posts",
+        "description": "Get engagement summary from your recent Facebook posts using browser automation (with API fallback).",
         "parameters": {"limit": "integer (optional)"},
         "handler": get_fb_feed_summary
     },
     "post_to_instagram": {
-        "description": "Post to Instagram Business account",
+        "description": "Post a caption to your Instagram account using browser automation (with API fallback). Requires HITL-approved file.",
         "parameters": {"caption": "string", "image_url": "string (optional)"},
         "handler": post_to_instagram
     },
     "get_ig_media_summary": {
-        "description": "Get engagement summary of recent Instagram posts",
+        "description": "Get engagement summary from your recent Instagram media using browser automation (with API fallback).",
         "parameters": {"limit": "integer (optional)"},
         "handler": get_ig_media_summary
     },
     "post_tweet": {
-        "description": "Post a tweet to X (Twitter), max 280 chars",
-        "parameters": {"text": "string"},
+        "description": "Post a tweet to your X/Twitter account using browser automation (with API fallback), max 280 chars. Requires HITL-approved file.",
+        "parameters": {"text": "string", "reply_to": "string (optional)"},
         "handler": post_tweet
     },
     "get_x_timeline_summary": {
-        "description": "Get engagement summary of recent tweets",
+        "description": "Get engagement summary from your recent X/Twitter posts using browser automation (with API fallback).",
         "parameters": {"limit": "integer (optional)"},
         "handler": get_x_timeline_summary
     },
+    "authenticate_platform": {
+        "description": "Authenticate a social media platform by opening a browser for manual login",
+        "parameters": {"platform": "string (facebook, instagram, or x)"},
+        "handler": lambda platform: browser_mcp_client.call_tool("authenticate_platform", {"platform": platform})
+    },
     "post_linkedin": {
-        "description": "Post to LinkedIn, max 3000 chars",
+        "description": "Post to LinkedIn, max 3000 chars (uses cookie-based auth like browser approach)",
         "parameters": {"text": "string", "visibility": "string (optional, PUBLIC/CONNECTIONS_ONLY/PRIVATE)"},
         "handler": post_linkedin
     },
     "get_linkedin_feed_summary": {
-        "description": "Get engagement summary of recent LinkedIn posts",
+        "description": "Get engagement summary of recent LinkedIn posts (uses cookie-based auth like browser approach)",
         "parameters": {"limit": "integer (optional)"},
         "handler": get_linkedin_feed_summary
     },

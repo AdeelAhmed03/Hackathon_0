@@ -664,6 +664,18 @@ class CloudExecutiveProcessor:
         except Exception as e:
             logger.error(f"[SYNC] Git sync failed: {e}")
 
+    def _handle_a2a_message(self, message):
+        """Handle incoming A2A messages from local agent."""
+        logger.info(f"[A2A] Received message: {message}")
+
+    def _a2a_health_ping(self):
+        """Send A2A health ping to local agent."""
+        if self._a2a_node:
+            try:
+                self._a2a_node.send("local", {"type": "health_ping", "status": "running"})
+            except Exception as e:
+                logger.warning(f"[A2A] Health ping failed: {e}")
+
     def log_status(self):
         try:
             status = self.service_manager.get_status()

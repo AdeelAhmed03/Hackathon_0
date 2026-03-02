@@ -16,3 +16,6 @@ linkedin-api>=2.0.0
 
 # ─── Gold ───
 tweepy>=4.14.0
+
+# ─── Platinum ───
+playwright>=1.40.0

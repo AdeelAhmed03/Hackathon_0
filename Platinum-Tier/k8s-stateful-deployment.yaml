@@ -1,0 +1,266 @@
+# Azure AKS Stateful Deployment for Platinum Tier AI Employee
+# This version uses StatefulSet for proper state management and persistent identity
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platinum-tier
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platinum-tier-config
+  namespace: platinum-tier
+data:
+  # Configuration for the Platinum Tier system
+  COMPANY_HANDBOOK_PATH: "/app/data/Company_Handbook.md"
+  DASHBOARD_PATH: "/app/data/Dashboard.md"
+  LOG_LEVEL: "INFO"
+  GMAIL_POLL_INTERVAL: "120"
+  SYNC_INTERVAL: "900"  # 15 minutes
+  HEALTH_CHECK_INTERVAL: "600"  # 10 minutes
+  GIT_SYNC_INTERVAL: "900"  # 15 minutes
+  VAULT_SYNC_ENABLED: "true"
+  CLOUD_EXECUTIVE_ROLE: "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-pvc
+  namespace: platinum-tier
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi  # Larger storage for vault data and logs
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: platinum-cloud-executive
+  namespace: platinum-tier
+  labels:
+    app: platinum-cloud-executive
+spec:
+  serviceName: platinum-cloud-service
+  replicas: 1  # Single replica for consistency of state
+  selector:
+    matchLabels:
+      app: platinum-cloud-executive
+  template:
+    metadata:
+      labels:
+        app: platinum-cloud-executive
+    spec:
+      initContainers:
+      # Initialize Git repository for vault sync
+      - name: git-init
+        image: alpine/git:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          git config --global user.email "platinum@system.local" &&
+          git config --global user.name "Platinum Cloud Executive" &&
+          if [ ! -d "/app/data/.git" ]; then
+            git init /app/data &&
+            git -C /app/data remote add origin ${VAULT_REMOTE_REPO} 2>/dev/null || true
+          fi
+        env:
+        - name: VAULT_REMOTE_REPO
+          value: "https://github.com/your-org/your-vault-repo.git"  # Replace with your vault repo
+        volumeMounts:
+        - name: vault-storage
+          mountPath: /app/data
+      containers:
+      - name: cloud-executive
+        image: platinum-tier-ai:latest  # Updated with ACR
+        imagePullPolicy: Always
+        command: ["python"]
+        args: ["watcher/orchestrator_cloud.py"]
+        env:
+        - name: PYTHONPATH
+          value: "/app"
+        - name: CLAUDE_CODE_ENV
+          value: "production"
+        - name: COMPANY_HANDBOOK_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: COMPANY_HANDBOOK_PATH
+        - name: DASHBOARD_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: DASHBOARD_PATH
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: LOG_LEVEL
+        - name: GMAIL_POLL_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: GMAIL_POLL_INTERVAL
+        - name: VAULT_SYNC_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: VAULT_SYNC_ENABLED
+        - name: CLOUD_EXECUTIVE_ROLE
+          valueFrom:
+            configMapKeyRef:
+              name: platinum-tier-config
+              key: CLOUD_EXECUTIVE_ROLE
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: vault-storage
+          mountPath: /app/data
+        - name: config-volume
+          mountPath: /app/config
+        - name: shared-tmp
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |
+              if [ -f "/app/.orchestrator.pids.json" ]; then
+                python -c "import json; f=open('/app/.orchestrator.pids.json'); data=json.load(f); f.close(); exit(0 if data else 1)"
+              else
+                exit(1)
+              fi
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          timeoutSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - test -f "/app/.orchestrator.pids.json" && python -c "import os; exit(0 if os.path.exists('/app/data/Dashboard.md') else 1)"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: config-volume
+        configMap:
+          name: platinum-tier-config
+      - name: shared-tmp
+        emptyDir: {}
+      - name: vault-storage
+        persistentVolumeClaim:
+          claimName: vault-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platinum-cloud-service
+  namespace: platinum-tier
+spec:
+  selector:
+    app: platinum-cloud-executive
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+# MCP Server (Stateless)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platinum-email-mcp
+  namespace: platinum-tier
+  labels:
+    app: platinum-email-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platinum-email-mcp
+  template:
+    metadata:
+      labels:
+        app: platinum-email-mcp
+    spec:
+      containers:
+      - name: email-mcp
+        image: platinum-tier-ai:latest
+        command: ["npm", "start"]
+        workingDir: /app/mcp-servers/email-mcp
+        env:
+        - name: NODE_ENV
+          value: "production"
+        ports:
+        - containerPort: 8080
+          name: mcp-http
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 60
+      volumes:
+      - name: config-volume
+        configMap:
+          name: platinum-tier-config
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platinum-email-mcp-service
+  namespace: platinum-tier
+spec:
+  selector:
+    app: platinum-email-mcp
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+# Horizontal Pod Autoscaler (optional)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: platinum-cloud-hpa
+  namespace: platinum-tier
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: platinum-cloud-executive
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70

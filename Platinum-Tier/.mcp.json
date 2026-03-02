@@ -35,7 +35,8 @@
         "X_ACCESS_TOKEN": "${X_ACCESS_TOKEN}",
         "X_ACCESS_SECRET": "${X_ACCESS_SECRET}",
         "X_BEARER_TOKEN": "${X_BEARER_TOKEN}",
-        "X_DRY_RUN": "true"
+        "X_DRY_RUN": "true",
+        "MCP_SOCIAL_DRY_RUN": "false"
       }
     },
     "social-mcp-fb": {

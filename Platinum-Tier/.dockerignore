@@ -1,0 +1,15 @@
+.whatsapp_session
+__pycache__
+.pytest_cache
+.claude
+.env
+.git
+*.pyc
+node_modules
+backup
+data/Logs/*.json
+token.json
+credentials.json
+authorized_user.json
+*.tar
+crane.exe

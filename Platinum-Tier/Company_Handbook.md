@@ -235,6 +235,14 @@ This handbook contains all company policies, procedures, and guidelines for empl
 - **Access Control**: Local operations require local authentication
 - **Audit Compliance**: All local operations fully logged with local context
 
+#### Social Media Authentication Policy
+- **Browser-based Authentication**: Use `social_auth.py` to authenticate social media accounts via browser
+- **Platform Support**: Facebook, Instagram, and X/Twitter authentication via Playwright automation
+- **Authentication Storage**: Session cookies saved to `data/Logs/{platform}_cookies.json`
+- **Security**: No passwords stored, only secure session cookies for automation
+- **Usage**: Run `python social_auth.py <platform>` to authenticate (e.g., `python social_auth.py facebook`)
+- **Approval Required**: All social media posts require HITL approval regardless of authentication method
+
 ---
 
 ## Platinum Tier Additions
