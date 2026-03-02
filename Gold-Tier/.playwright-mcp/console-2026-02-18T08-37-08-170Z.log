@@ -1,6 +1,0 @@
-[   20230ms] [ERROR] ErrorUtils caught an error:
-
-[uim] Attempting to set multiple UIM tree roots. Expecting only one. Existing root: App, New root: App (multiple-uim-roots)
-
-Subsequent non-fatal errors won't be logged; see https://fburl.com/debugjs. {column: 17870, clientTime: 1771403848, extra: Object, guardList: Array(0), hash: orxqzt} @ https://static.whatsapp.net/rsrc.php/v4/y1/r/nNYs_w7IK4e.js:76
-[   51231ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://crashlogs.whatsapp.net/wa_fls_upload_check?type=crashlog&access_token=1063127757113399%7C745146ffa34413f9dbb5469f5370b7af:0
